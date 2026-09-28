@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RevCompass — Solution Workflow</title>
+<style>
+  :root{
+    --orange:#FD5108;
+    --orange-light:#FE7C39;
+    --peach:#FFAA72;
+    --gray1:#A1A8B3;
+    --gray2:#B5BCC4;
+    --gray3:#CBD1D6;
+    --lightbg:#EFEFEF;
+    --panel:#FFFFFF;
+    --ink:#15130F;
+    --sub:#5B5E63;
+    --dark:#171512;
+    --dark2:#221F1A;
+    --line:#E1DFDB;
+    --serif: Georgia, "Iowan Old Style", "Times New Roman", serif;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:var(--sans);
+    color:var(--ink);
+    background:#F7F6F4;
+    -webkit-font-smoothing:antialiased;
+  }
+  @media (prefers-reduced-motion: reduce){
+    *{transition:none !important; animation:none !important;}
+  }
+
+  /* ---------- top masthead ---------- */
+  .masthead{
+    background:var(--dark);
+    color:#fff;
+    padding:26px 40px 22px;
+    position:relative;
+    overflow:hidden;
+  }
+  .masthead::after{
+    content:"";
+    position:absolute; right:-60px; top:-60px;
+    width:220px; height:220px; border-radius:50%;
+    border:2px solid rgba(253,81,8,0.35);
+  }
+  .masthead::before{
+    content:"";
+    position:absolute; right:10px; top:30px;
+    width:60px; height:60px; border-radius:50%;
+    background:var(--orange);
+    opacity:.9;
+  }
+  .kicker{
+    font-size:11px; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--peach); font-weight:700; margin:0 0 6px;
+  }
+  .masthead h1{
+    font-family:var(--serif);
+    font-size:34px; font-weight:700; margin:0 0 6px; line-height:1.05;
+    max-width:640px;
+  }
+  .masthead p{
+    margin:0; color:#C9C6C0; font-size:14.5px; max-width:560px; line-height:1.5;
+  }
+
+  /* ---------- primary tabs ---------- */
+  nav.primary{
+    display:flex; gap:2px;
+    background:var(--dark2);
+    padding:0 40px;
+  }
+  nav.primary button{
+    appearance:none; border:none; background:transparent;
+    color:#B9B6B0; font-family:var(--sans); font-size:14.5px; font-weight:600;
+    padding:15px 22px 13px; cursor:pointer;
+    border-bottom:3px solid transparent;
+    letter-spacing:.01em;
+  }
+  nav.primary button:hover{ color:#fff; }
+  nav.primary button.active{
+    color:#fff; border-bottom-color:var(--orange);
+  }
+  nav.primary button:focus-visible{ outline:2px solid var(--peach); outline-offset:-2px; }
+
+  main{ max-width:1180px; margin:0 auto; padding:38px 40px 80px; }
+  .panel{ display:none; }
+  .panel.active{ display:block; }
+
+  .section{ margin-bottom:52px; }
+  .section-head{
+    display:flex; align-items:baseline; gap:14px; margin-bottom:18px;
+    border-bottom:1px solid var(--line); padding-bottom:12px;
+  }
+  .section-num{
+    font-family:var(--serif); font-size:15px; color:var(--orange); font-weight:700;
+  }
+  .section-head h2{
+    font-family:var(--serif); font-size:23px; margin:0; font-weight:700;
+  }
+  .section-note{ color:var(--sub); font-size:13.5px; margin:-6px 0 20px; max-width:680px; line-height:1.55; }
+
+  .lede{
+    font-family:var(--serif); font-size:17px; line-height:1.6; color:#2B2925;
+    max-width:760px; margin:0 0 44px;
+  }
+
+  /* ---------- data-source diagram ---------- */
+  .flow-row{
+    display:flex; align-items:stretch; gap:0; flex-wrap:wrap;
+  }
+  .flow-box{
+    background:var(--panel); border:1px solid var(--line); border-radius:10px;
+    padding:16px 18px; min-width:150px;
+  }
+  .flow-arrow{
+    display:flex; align-items:center; justify-content:center;
+    color:var(--gray1); font-size:20px; padding:0 10px; min-width:36px;
+  }
+  .ehr-box{
+    background:var(--dark); color:#fff; border-radius:10px; padding:20px;
+    min-width:170px; display:flex; flex-direction:column; justify-content:center;
+  }
+  .ehr-box .tag{ font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--peach); font-weight:700; margin-bottom:6px;}
+  .ehr-box strong{ font-family:var(--serif); font-size:19px; }
+  .ehr-box span{ font-size:12px; color:#C9C6C0; display:block; margin-top:4px; }
+
+  .feed-grid{
+    display:grid; grid-template-columns:repeat(2,1fr); gap:8px;
+    flex:1; min-width:280px;
+  }
+  .feed-chip{
+    background:var(--panel); border:1px solid var(--line); border-radius:8px;
+    padding:9px 12px; font-size:12.5px; font-weight:600; color:#2B2925;
+    display:flex; align-items:center; gap:8px;
+  }
+  .feed-chip::before{
+    content:""; width:7px; height:7px; border-radius:50%; background:var(--orange); flex:none;
+  }
+  .feed-chip:nth-child(4n+2)::before{ background:var(--orange-light); }
+  .feed-chip:nth-child(4n+3)::before{ background:var(--gray1); }
+  .feed-chip:nth-child(4n+4)::before{ background:var(--peach); }
+
+  .ingest-box{
+    background:var(--panel); border:2px solid var(--orange); border-radius:10px;
+    padding:16px 18px; min-width:190px; display:flex; flex-direction:column; justify-content:center;
+  }
+  .ingest-box .tag{ font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--orange); font-weight:700; margin-bottom:4px; }
+  .ingest-box strong{ font-size:14.5px; }
+
+  .record-box{
+    background:var(--dark); color:#fff; border-radius:10px; padding:16px 20px;
+    max-width:900px; margin-top:18px;
+  }
+  .record-box code{
+    font-family:"Courier New", monospace; font-size:13px; color:var(--peach);
+  }
+  .caption{ color:var(--sub); font-size:13px; margin-top:14px; max-width:700px; font-style:italic; line-height:1.5; }
+
+  /* ---------- orchestrator strip ---------- */
+  .orchestrator{
+    background:#FBEFE7; border:1px solid #F4CFA9; border-radius:10px;
+    padding:12px 18px; font-size:12.5px; font-weight:600; color:#7A3B0F;
+    margin-bottom:6px;
+  }
+  .orchestrator b{ color:var(--orange); }
+
+  /* ---------- pipeline timeline ---------- */
+  .timeline{ position:relative; padding-left:46px; margin-top:26px; }
+  .timeline::before{
+    content:""; position:absolute; left:17px; top:6px; bottom:6px; width:2px;
+    background:var(--line);
+  }
+  .tl-step{ position:relative; margin-bottom:14px; }
+  .tl-dot{
+    position:absolute; left:-46px; top:14px; width:36px; height:36px; border-radius:50%;
+    background:var(--dark); color:#fff; display:flex; align-items:center; justify-content:center;
+    font-family:var(--serif); font-weight:700; font-size:14.5px; z-index:2;
+  }
+  .tl-card{
+    background:var(--panel); border:1px solid var(--line); border-radius:10px;
+    padding:14px 18px 15px;
+  }
+  .tl-card h3{ margin:0 0 8px; font-size:15px; font-family:var(--serif); font-weight:700; }
+  .tl-split{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .tl-split .col-label{ font-size:10px; letter-spacing:.07em; text-transform:uppercase; color:var(--gray1); font-weight:700; margin-bottom:3px; }
+  .tl-split .col-text{ font-size:13px; color:#3A3833; line-height:1.45; }
+
+  .tl-gate{
+    position:relative; margin:6px 0 22px 0; padding-left:0;
+  }
+  .tl-gate .gate-line{
+    display:flex; align-items:center; gap:12px; margin-left:-46px; padding-left:0;
+  }
+  .gate-badge{
+    width:36px; height:36px; border-radius:50%; background:var(--orange); color:#fff;
+    display:flex; align-items:center; justify-content:center; font-size:15px; flex:none; z-index:2;
+  }
+  .gate-text{
+    background:#FBEFE7; border:1px dashed #F0B57F; border-radius:8px;
+    padding:8px 14px; font-size:12.5px; font-weight:600; color:#7A3B0F; flex:1;
+  }
+
+  /* ---------- workflow subtabs ---------- */
+  .subnav{ display:flex; gap:10px; margin-bottom:8px; flex-wrap:wrap; }
+  .subnav button{
+    appearance:none; border:1px solid var(--line); background:#fff;
+    border-radius:999px; padding:9px 18px; font-size:13px; font-weight:700;
+    color:var(--sub); cursor:pointer; display:flex; align-items:center; gap:8px;
+  }
+  .subnav button .chip{ width:9px; height:9px; border-radius:50%; background:var(--gray2); }
+  .subnav button.active{ background:var(--dark); border-color:var(--dark); color:#fff; }
+  .subnav button.active .chip{ background:var(--orange); }
+  .subnav button:hover:not(.active){ border-color:var(--orange); color:var(--ink); }
+  .subnav button:focus-visible{ outline:2px solid var(--orange); outline-offset:2px; }
+
+  .wf-panel{ display:none; margin-top:26px; }
+  .wf-panel.active{ display:block; }
+
+  .wf-scenario{
+    display:flex; gap:16px; align-items:flex-start;
+    background:var(--dark); color:#fff; border-radius:12px; padding:20px 24px; margin-bottom:8px;
+  }
+  .wf-scenario .icon{ flex:none; width:44px; height:44px; }
+  .wf-scenario .label{ font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--peach); font-weight:700; margin-bottom:5px; }
+  .wf-scenario p{ margin:0; font-family:var(--serif); font-size:16.5px; line-height:1.45; }
+
+  .wf-mini-track{
+    display:flex; gap:6px; margin:22px 0 8px; overflow-x:auto; padding-bottom:4px;
+  }
+  .wf-mini-step{
+    flex:1; min-width:84px; text-align:center; font-size:10.5px; font-weight:700; color:var(--gray1);
+    padding-bottom:8px; border-bottom:3px solid var(--line);
+  }
+  .wf-mini-step.on{ color:var(--orange); border-bottom-color:var(--orange); }
+
+  .result-card{
+    margin-top:26px; background:var(--panel); border:1px solid var(--line); border-radius:12px;
+    padding:22px 26px; display:flex; flex-wrap:wrap; gap:26px; align-items:center;
+  }
+  .result-card .rc-title{ font-family:var(--serif); font-size:15px; font-weight:700; flex-basis:100%; margin-bottom:2px; }
+  .stat{ min-width:110px; }
+  .stat .num{ font-family:var(--serif); font-size:25px; font-weight:700; color:var(--orange); }
+  .stat .lbl{ font-size:11.5px; color:var(--sub); margin-top:2px; }
+
+  footer{
+    text-align:center; padding:26px 20px 40px; color:var(--gray1); font-size:12px;
+  }
+
+  @media (max-width:760px){
+    .masthead{ padding:22px 20px 18px; }
+    .masthead h1{ font-size:26px; }
+    nav.primary{ padding:0 16px; overflow-x:auto; }
+    main{ padding:26px 18px 60px; }
+    .tl-split{ grid-template-columns:1fr; gap:6px; }
+    .feed-grid{ grid-template-columns:1fr; }
+    .flow-arrow{ transform:rotate(90deg); padding:6px 0; }
+    .flow-row{ flex-direction:column; align-items:stretch; }
+  }
+</style>
+</head>
+<body>
+
+<div class="masthead">
+  <p class="kicker">Build with Gemini · Round 2 · Solution Workflow</p>
+  <h1>RevCompass — how the machine actually runs</h1>
+  <p>One structure, three engines. This walkthrough shows the agents and data behind RevCompass, then traces three real scenarios — a payer drift, an appeal, and a contract variance — through the exact same pipeline.</p>
+</div>
+
+<nav class="primary" role="tablist">
+  <button class="active" data-tab="structure" role="tab" aria-selected="true">1 · Structure</button>
+  <button data-tab="workflows" role="tab" aria-selected="false">2 · Workflows</button>
+</nav>
+
+<main>
+
+  <!-- ================= TAB 1: STRUCTURE ================= -->
+  <section class="panel active" id="panel-structure">
+
+    <p class="lede">RevCompass doesn't replace Epic or any other system of record — it sits above them. It reads what those systems already produce, normalizes it into one record type, and routes that record through seven purpose-built agents before anything reaches a person.</p>
+
+    <div class="section">
+      <div class="section-head">
+        <span class="section-num">01</span>
+        <h2>Where the data comes from</h2>
+      </div>
+      <p class="section-note">Every RevCompass decision traces back to a single normalized record, assembled from eight feeds that already exist in the hospital's systems today.</p>
+
+      <div class="flow-row">
+        <div class="ehr-box">
+          <span class="tag">Source system</span>
+          <strong>Epic</strong>
+          <span>+ other RCM platforms</span>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="feed-grid">
+          <div class="feed-chip">Claims (837)</div>
+          <div class="feed-chip">Remits (835)</div>
+          <div class="feed-chip">Payer identity &amp; product</div>
+          <div class="feed-chip">CPT / DRG</div>
+          <div class="feed-chip">CARC / RARC reason codes</div>
+          <div class="feed-chip">Contract variance (expected vs. actual)</div>
+          <div class="feed-chip">Payer policy documents</div>
+          <div class="feed-chip">Historical outcomes</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="ingest-box">
+          <span class="tag">Agent 1</span>
+          <strong>Ingestion &amp; Doc Understanding</strong>
+        </div>
+      </div>
+
+      <div class="record-box">
+        <code>VarianceRecord = payer × CPT/DRG × CARC/RARC × variance type × $ × dates</code>
+      </div>
+      <p class="caption">The ingestion agent parses 837/835, de-identifies PHI, and maps every reason code to a shared dictionary before anything downstream ever sees a claim.</p>
+    </div>
+
+    <div class="section">
+      <div class="section-head">
+        <span class="section-num">02</span>
+        <h2>The seven-agent pipeline</h2>
+      </div>
+      <p class="section-note">Every VarianceRecord — denial, underpayment, or fingerprint alert — moves through the same seven agents. Gemini reasons and explains at each step; a deterministic tool supplies every number.</p>
+
+      <div class="orchestrator"><b>Orchestrator</b> — ADK supervisor · Agent Engine runtime · Memory Bank (persistent fingerprint + outcomes) · enforces the human-approval gate</div>
+
+      <div class="timeline" id="structure-timeline"></div>
+    </div>
+
+  </section>
+
+  <!-- ================= TAB 2: WORKFLOWS ================= -->
+  <section class="panel" id="panel-workflows">
+
+    <p class="lede">Same seven agents, three different triggers. Each workflow below follows one real scenario end to end — what each agent sees, decides, and hands off next.</p>
+
+    <div class="subnav" id="wf-subnav"></div>
+
+    <div id="wf-content"></div>
+
+  </section>
+
+</main>
+
+<footer>RevCompass · Payer-behavior &amp; disposition intelligence, above the EHR</footer>
+
+<script>
+const AGENTS = [
+  { n:"1", name:"Ingestion & Doc Understanding", gemini:"Extract terms from contracts/policies (multimodal)", tool:"837/835 parsers · de-id · CARC dict" },
+  { n:"2", name:"Payer Behavior", gemini:"Narrate what changed & why", tool:"Fingerprint stats · drift detector" },
+  { n:"3", name:"Clustering", gemini:"Semantic merge/split · root-cause hypothesis", tool:"Signature grouper · embeddings" },
+  { n:"4", name:"Evidence & Grounding", gemini:"Verify hypothesis vs. contract/policy text", tool:"Vertex AI Search retrieval" },
+  { n:"5", name:"Disposition", gemini:"Explain the recommendation", tool:"EV / recovery-prob engine · filing check" },
+  { n:"6", name:"Action / Packaging", gemini:"Draft the consolidated appeal", tool:"Format tool · function-calling emitter" },
+  { n:"7", name:"Outcome & Learning", gemini:"Confirm/kill the hypothesis", tool:"Overturn-rate & fingerprint updaters" },
+];
+
+function renderTimeline(container, agents, annotations, gateLabel){
+  container.innerHTML = "";
+  agents.forEach((a, i) => {
+    const step = document.createElement("div");
+    step.className = "tl-step";
+    const note = annotations ? annotations[i] : null;
+    step.innerHTML = `
+      <div class="tl-dot">${a.n}</div>
+      <div class="tl-card">
+        <h3>${a.name}</h3>
+        <div class="tl-split">
+          <div><div class="col-label">Gemini does</div><div class="col-text">${a.gemini}</div></div>
+          <div><div class="col-label">Tool does</div><div class="col-text">${a.tool}</div></div>
+        </div>
+        ${note ? `<div class="tl-split" style="margin-top:10px;grid-template-columns:1fr;"><div><div class="col-label" style="color:var(--orange);">In this case</div><div class="col-text">${note}</div></div></div>` : ""}
+      </div>`;
+    container.appendChild(step);
+    if(i === 4){
+      const gate = document.createElement("div");
+      gate.className = "tl-gate";
+      gate.innerHTML = `<div class="gate-line"><div class="gate-badge">✓</div><div class="gate-text">${gateLabel || "Human approval gate — an analyst reviews evidence + confidence before anything is submitted."}</div></div>`;
+      container.appendChild(gate);
+    }
+  });
+}
+
+renderTimeline(document.getElementById("structure-timeline"), AGENTS, null);
+
+// ---------------- workflows ----------------
+const WORKFLOWS = {
+  "3a": {
+    label: "3A · Payer Fingerprint",
+    scenario: "BCBS spinal-fusion claims start denying at triple the normal rate. The fingerprint catches the shift before the volume does — and explains why the resulting denials split into two very different dispositions.",
+    gate: "Analyst reviews the package — approves the appeal subset, leaves the rest for write-off per policy.",
+    notes: [
+      "163 new BCBS spinal-fusion claims land as VarianceRecords, all carrying denial code CO-50.",
+      "BCBS's fingerprint shows the denial rate for this CPT jumped from 4% to 12% starting June 3 — flagged as drift before the volume builds further.",
+      "All 163 claims share the same payer × CPT × CARC × date-range signature and are grouped into one candidate package.",
+      "Vertex AI Search finds BCBS quietly changed its policy wording on May 28 — conservative therapy is now required before surgery.",
+      "Claims that meet the old criteria: appeal, 79% historical overturn rate. Claims missing conservative therapy: write-off — EV is negative.",
+      "One package, two dispositions. The analyst approves the appeal subset; the write-off subset is logged, not submitted.",
+      "The overturn rate on the appealed subset becomes BCBS's new appeal baseline for this exact policy wording.",
+    ],
+    stats: [ ["$1.8M","Exposure"], ["~$1.1M","Recoverable"], ["89%","Confidence"], ["12 days","Time to detection"] ],
+  },
+  "3b": {
+    label: "3B · Appeal Engine",
+    scenario: "Aetna quietly downgrades 52 claims from DRG 871 to DRG 872. The disposition engine turns 52 separate mysteries into one appeal with a positive expected value.",
+    gate: "Analyst reviews the drafted appeal and evidence, then approves submission for all 52 claims at once.",
+    notes: [
+      "52 VarianceRecords land: Aetna, DRG 871 → 872, downgrade, $899K total exposure.",
+      "The downgrade rate for this DRG pair has climbed from 4% to 61% in eight weeks — a drift alert is raised alongside the denials.",
+      "All 52 claims share payer × DRG-pair × reason and are grouped into one package with one root-cause hypothesis.",
+      "Contract §4.2 and Policy P-118 confirm reassignment requires a medical-record review — one Aetna skipped on every claim.",
+      "EV(appeal) = $899K × 0.82 − 52 × $45 ≈ $735K → Appeal, High confidence. EV(write-off) = 0 is clearly dominated.",
+      "One consolidated appeal is drafted for all 52 claims, citing Contract §4.2 and Policy P-118, and submitted after approval.",
+      "47 of 52 overturn — $812K recovered. The result feeds back into Aetna's fingerprint and the recovery-probability model.",
+    ],
+    stats: [ ["52","Claims"], ["$899K","Exposure"], ["$812K","Recovered"], ["91%","Confidence"] ],
+  },
+  "3c": {
+    label: "3C · Contract Variance",
+    scenario: "412 orthopedic claims have been paid at an outdated contracted rate since July. The variance engine catches the pattern behind the shortfall, not just each individual paycheck.",
+    gate: "Analyst reviews the escalation package before it goes to the payer relationship team — this is a rate correction, not an appeal.",
+    notes: [
+      "The contract-management system reports expected $12,000 vs. actual $9,000 on each claim — a $3,000 variance × 412 claims.",
+      "The underpayment rate for this DRG/payer combination has been rising steadily since July 1 — flagged as sustained, not a one-off.",
+      "All 412 claims share payer × DRG × variance-type and are grouped into one package: 'outdated contracted rate.'",
+      "A contract amendment effective July 1 is found in the policy store — the payment system was never updated to match it.",
+      "Expected value across the package is strongly positive at the package level — recommend payer escalation, not 412 individual appeals.",
+      "One escalation request is drafted for all 412 claims, citing the contract amendment, and routed to the payer relationship team.",
+      "Recovery is tracked against the $620K exposure, and the contract rate table is flagged for correction going forward.",
+    ],
+    stats: [ ["412","Claims"], ["$620K","Exposure"], ["Outdated rate","Root cause"], ["Escalation","Recommended action"] ],
+  },
+};
+
+const subnav = document.getElementById("wf-subnav");
+const wfContent = document.getElementById("wf-content");
+
+function iconFor(key){
+  if(key === "3a") return `<svg viewBox="0 0 44 44" fill="none"><circle cx="22" cy="22" r="4" stroke="#FE7C39" stroke-width="2"/><circle cx="22" cy="22" r="11" stroke="#FE7C39" stroke-width="2" opacity="0.6"/><circle cx="22" cy="22" r="18" stroke="#FE7C39" stroke-width="2" opacity="0.3"/></svg>`;
+  if(key === "3b") return `<svg viewBox="0 0 44 44" fill="none"><path d="M9 23l8 8 18-18" stroke="#FE7C39" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  return `<svg viewBox="0 0 44 44" fill="none"><rect x="8" y="7" width="20" height="26" rx="2" stroke="#FE7C39" stroke-width="2"/><path d="M13 15h10M13 20h10M13 25h6" stroke="#FE7C39" stroke-width="2" stroke-linecap="round"/><circle cx="31" cy="30" r="7" fill="#171512" stroke="#FE7C39" stroke-width="2"/><text x="31" y="33.5" font-size="9" fill="#FE7C39" text-anchor="middle" font-family="Georgia">$</text></svg>`;
+}
+
+Object.keys(WORKFLOWS).forEach((key, i) => {
+  const btn = document.createElement("button");
+  btn.dataset.key = key;
+  btn.innerHTML = `<span class="chip"></span>${WORKFLOWS[key].label}`;
+  if(i === 0) btn.classList.add("active");
+  btn.addEventListener("click", () => showWorkflow(key));
+  subnav.appendChild(btn);
+
+  const panel = document.createElement("div");
+  panel.className = "wf-panel" + (i === 0 ? " active" : "");
+  panel.id = "wf-" + key;
+  wfContent.appendChild(panel);
+});
+
+function showWorkflow(key){
+  document.querySelectorAll("#wf-subnav button").forEach(b => b.classList.toggle("active", b.dataset.key === key));
+  document.querySelectorAll(".wf-panel").forEach(p => p.classList.toggle("active", p.id === "wf-" + key));
+  const panel = document.getElementById("wf-" + key);
+  if(panel.dataset.built) return;
+  panel.dataset.built = "1";
+  const wf = WORKFLOWS[key];
+
+  const mini = AGENTS.map((a,i) => `<div class="wf-mini-step on">${a.n}. ${a.name}</div>`).join("");
+
+  panel.innerHTML = `
+    <div class="wf-scenario">
+      <div class="icon">${iconFor(key)}</div>
+      <div>
+        <div class="label">${wf.label}</div>
+        <p>${wf.scenario}</p>
+      </div>
+    </div>
+    <div class="wf-mini-track">${mini}</div>
+    <div class="timeline" id="tl-${key}"></div>
+    <div class="result-card">
+      <div class="rc-title">Result</div>
+      ${wf.stats.map(s => `<div class="stat"><div class="num">${s[0]}</div><div class="lbl">${s[1]}</div></div>`).join("")}
+    </div>
+  `;
+  renderTimeline(document.getElementById("tl-" + key), AGENTS, wf.notes, wf.gate);
+}
+showWorkflow("3a");
+
+// ---------------- primary tabs ----------------
+document.querySelectorAll("nav.primary button").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll("nav.primary button").forEach(b => { b.classList.remove("active"); b.setAttribute("aria-selected","false"); });
+    btn.classList.add("active"); btn.setAttribute("aria-selected","true");
+    document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+    document.getElementById("panel-" + btn.dataset.tab).classList.add("active");
+  });
+});
+</script>
+
+</body>
+</html>

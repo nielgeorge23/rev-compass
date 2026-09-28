@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RevCompass — Consolidated Architecture</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+  :root{
+    --font-sans: Arial, Helvetica, sans-serif;
+    --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+    --ink:#14171C;
+    --ink-soft:#3C4148;
+    --muted:#6B7280;
+    --line:#E1E4E9;
+    --surface:#FFFFFF;
+    --surface-alt:#F4F5F7;
+    --shared-bg:#101418;
+    --accent:#FD5108;
+    --accent-soft:#FFE7DB;
+    --teal:#0E6E5C;
+    --teal-soft:#DFF3EE;
+    --blue:#33566D;
+    --blue-soft:#E6EDF1;
+    --clay:#B25A2B;
+    --clay-soft:#F6E9DE;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;background:var(--surface-alt);color:var(--ink);
+    font-family:var(--font-sans);-webkit-font-smoothing:antialiased;
+  }
+  code,.mono{font-family:var(--font-mono);}
+  .wrap{max-width:1180px;margin:0 auto;padding:56px 32px 96px;}
+
+  header.page{margin-bottom:28px;}
+  header.page .kicker{font-size:13px;color:var(--accent);font-weight:600;margin-bottom:10px;}
+  header.page h1{font-size:32px;line-height:1.2;margin:0 0 10px;font-weight:700;letter-spacing:-0.01em;max-width:820px;}
+  header.page .sub{font-size:15.5px;color:var(--ink-soft);max-width:700px;line-height:1.6;margin:0 0 14px;}
+  .principle-pill{
+    display:inline-flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted);
+    border:1px solid var(--line);border-radius:20px;padding:6px 14px;background:#fff;
+  }
+  .principle-pill b{color:var(--ink);font-weight:600;}
+
+  .status-legend{
+    display:flex;gap:20px;align-items:center;font-size:11.5px;color:var(--muted);flex-wrap:wrap;
+    background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px 18px;margin:22px 0;
+  }
+  .status-legend .item{display:flex;align-items:center;gap:7px;}
+  .status-legend .swatch{width:13px;height:13px;border-radius:4px;}
+  .swatch.built{background:var(--teal);}
+  .swatch.roadmap{border:1.5px dashed var(--muted);background:transparent;}
+  .badge-built,.badge-roadmap{
+    font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:.02em;
+    padding:2px 7px;border-radius:5px;margin-left:6px;white-space:nowrap;
+  }
+  .badge-built{background:var(--teal-soft);color:var(--teal);}
+  .badge-roadmap{border:1px dashed var(--muted);color:var(--muted);}
+
+  /* stage shell */
+  .stage{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:26px 28px;}
+  .connector{display:flex;align-items:center;gap:10px;padding:10px 0 10px 40px;color:var(--muted);font-size:12.5px;}
+  .connector .stem{width:2px;height:22px;background:var(--line);margin-left:11px;}
+
+  .layer-title{
+    display:flex;align-items:center;gap:10px;margin:40px 0 14px;
+  }
+  .layer-title .tag-num{
+    font-family:var(--font-mono);font-size:11px;color:#fff;background:var(--ink);
+    border-radius:6px;padding:3px 9px;font-weight:600;
+  }
+  .layer-title h2.big{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0;font-weight:700;}
+  .layer-title .line-fill{flex:1;height:1px;background:var(--line);}
+
+  .stage-label{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
+  .stage-label .num{
+    width:26px;height:26px;border-radius:7px;background:var(--ink);color:#fff;
+    display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;
+    font-family:var(--font-mono);flex:0 0 auto;
+  }
+  .stage-label h2{font-size:16px;margin:0;font-weight:600;}
+  .stage-label .tag{font-size:11px;color:var(--muted);border:1px solid var(--line);border-radius:20px;padding:2px 10px;margin-left:auto;}
+  .stage p.desc{font-size:12.5px;color:var(--muted);max-width:720px;line-height:1.6;margin:0 0 14px;}
+
+  .row{display:flex;gap:14px;flex-wrap:wrap;}
+  .card{flex:1;min-width:190px;background:var(--surface-alt);border:1px solid var(--line);border-radius:10px;padding:14px 16px;}
+  .card h3{font-size:13.5px;margin:0 0 6px;font-weight:600;}
+  .card p{font-size:12px;color:var(--muted);margin:0;line-height:1.5;}
+  .card .chip{
+    display:inline-block;font-size:10.5px;font-family:var(--font-mono);color:var(--ink-soft);
+    background:#fff;border:1px solid var(--line);border-radius:5px;padding:2px 6px;margin:2px 4px 0 0;
+  }
+
+  .schema{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;}
+  .schema span{font-family:var(--font-mono);font-size:11px;background:#fff;border:1px solid var(--line);border-radius:6px;padding:4px 9px;color:var(--ink-soft);}
+
+  .failure-strip{margin-top:14px;background:#FFF9F5;border:1px solid #FFD9C2;border-radius:10px;padding:14px 18px;}
+  .failure-strip .ft{font-size:11.5px;font-weight:600;color:#9A3412;margin-bottom:8px;}
+  .failure-strip ul{margin:0;padding-left:18px;}
+  .failure-strip li{font-size:12px;color:#7A2B0B;line-height:1.7;}
+
+  /* guardrail note */
+  .guardrail-note{
+    margin-top:14px;font-size:12px;color:var(--ink-soft);background:var(--blue-soft);
+    border-left:3px solid var(--blue);border-radius:8px;padding:10px 14px;line-height:1.55;
+  }
+  .guardrail-note b{color:var(--blue);}
+
+  /* signature stage */
+  .sig-flow{display:flex;align-items:center;gap:18px;flex-wrap:wrap;}
+  .claimcard{border:1px solid var(--line);border-radius:10px;padding:14px 16px;background:var(--surface-alt);min-width:230px;flex:1;}
+  .claimcard .h{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:600;margin-bottom:8px;}
+  .attrwrap{display:flex;flex-wrap:wrap;gap:6px;}
+  .attr{font-size:11px;background:#fff;border:1px solid var(--line);border-radius:7px;padding:5px 8px;color:var(--ink-soft);}
+  .attr b{color:var(--ink);font-weight:600;}
+  .arrow-mid{font-size:20px;color:var(--muted);flex:0 0 auto;}
+  .sigcard{border:1.5px solid var(--blue);border-radius:10px;padding:14px 16px;background:var(--blue-soft);min-width:250px;flex:1;}
+  .sigcard .h{font-size:10.5px;color:var(--blue);text-transform:uppercase;letter-spacing:.05em;font-weight:700;margin-bottom:8px;}
+  .sigrow{display:flex;justify-content:space-between;font-size:11.5px;padding:3px 0;border-bottom:1px dashed var(--line);color:var(--ink-soft);gap:10px;}
+  .sigrow:last-child{border-bottom:none;}
+  .sigrow b{color:var(--ink);font-weight:600;text-align:right;}
+  .deterministic-tag{
+    display:inline-block;margin-top:12px;font-size:10.5px;font-weight:600;color:var(--teal);
+    background:var(--teal-soft);border-radius:6px;padding:3px 9px;
+  }
+
+  /* clustering */
+  .cluster-row{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin-top:10px;}
+  .clusterbubble{border-radius:16px;padding:16px 18px;text-align:center;min-width:140px;border:1.5px solid var(--line);background:var(--surface-alt);}
+  .clusterbubble.hot{border-color:var(--accent);background:var(--accent-soft);}
+  .clusterbubble .n{font-size:12px;font-weight:600;color:var(--ink);}
+  .clusterbubble .c{font-size:10.5px;color:var(--muted);margin-top:3px;}
+  .clusterbubble .v{font-size:15px;font-weight:700;margin-top:6px;font-family:var(--font-mono);color:var(--accent);}
+  .clusterbubble.hot .v{color:var(--accent);}
+
+  /* legend grid */
+  .legendgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:6px 0 20px;}
+  .legendcard{border:1px solid var(--line);border-radius:10px;padding:13px 14px;background:var(--surface-alt);}
+  .legendcard .k{font-family:var(--font-mono);font-size:11px;font-weight:700;margin-bottom:5px;}
+  .legendcard .d{font-size:11.5px;color:var(--muted);line-height:1.4;}
+
+  /* orchestrator + scenario */
+  .orchestrator{background:var(--ink);color:#fff;border-radius:10px;padding:9px 16px;font-size:12px;text-align:center;margin-bottom:16px;display:flex;align-items:center;justify-content:center;gap:8px;}
+  .orchestrator .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);}
+
+  .scenario-toggle{display:flex;gap:8px;justify-content:center;margin-bottom:16px;}
+  .scenario-btn{
+    border:1px solid var(--line);background:#fff;border-radius:20px;padding:7px 16px;font-size:12px;
+    font-weight:600;color:var(--ink-soft);cursor:pointer;font-family:inherit;
+  }
+  .scenario-btn.active{background:var(--ink);color:#fff;border-color:var(--ink);}
+
+  .enginebar{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:6px;}
+  .enginecard{flex:1;min-width:220px;border-radius:10px;border:1.5px solid var(--line);padding:12px 14px;background:#fff;transition:border-color .2s,background .2s,opacity .2s;}
+  .enginecard .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;gap:8px;}
+  .enginecard .nm{font-size:12.5px;font-weight:700;color:var(--ink);}
+  .enginecard .d2{font-size:11px;color:var(--muted);line-height:1.35;}
+  .statuspill{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:3px 8px;border-radius:999px;white-space:nowrap;}
+  .statuspill.on{background:var(--teal-soft);color:var(--teal);}
+  .statuspill.off{background:var(--surface-alt);color:var(--muted);}
+  .statuspill.context{background:var(--accent-soft);color:var(--accent);}
+  .enginecard.off{opacity:.5;}
+  .enginecard.on{border-color:var(--teal);}
+
+  /* engine detail (click to expand) */
+  .enginedetail-list{display:flex;flex-direction:column;gap:10px;margin-top:18px;}
+  .enginedetail{border:1px solid var(--line);border-radius:10px;background:#fff;overflow:hidden;cursor:pointer;}
+  .enginedetail .head{display:flex;align-items:center;gap:10px;padding:14px 16px;}
+  .enginedetail .head .idx{font-family:var(--font-mono);font-size:11px;color:var(--muted);}
+  .enginedetail .head h4{font-size:13.5px;margin:0;font-weight:600;flex:1;}
+  .enginedetail .head .cap{font-size:11.5px;color:var(--muted);}
+  .enginedetail .head .chev{color:var(--muted);font-size:12px;transition:transform .15s;}
+  .enginedetail.open .head .chev{transform:rotate(90deg);}
+  .enginedetail .body{display:none;padding:0 16px 16px;font-size:12px;color:var(--ink-soft);line-height:1.6;}
+  .enginedetail.open .body{display:block;}
+  .enginedetail .body .grid2{display:grid;grid-template-columns:100px 1fr;gap:6px 14px;margin:8px 0;}
+  .enginedetail .body .grid2 b{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.02em;font-weight:600;}
+  .enginedetail .body .grid2 span{font-size:11.5px;}
+
+  .agenttypes{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:18px;}
+  .agenttypes h5{font-size:11px;margin:0 0 10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:700;}
+  .agentrow{display:flex;flex-wrap:wrap;gap:8px;}
+  .agentchip{display:flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:999px;padding:6px 12px 6px 8px;background:#fff;font-size:11.5px;}
+  .agentchip .avatar{width:8px;height:8px;border-radius:50%;background:var(--blue);}
+  .agentchip .role{color:var(--muted);font-size:10px;}
+
+  /* shared payer intelligence — subdued */
+  .shared-note{
+    margin-top:18px;background:var(--surface-alt);border:1px dashed var(--muted);border-radius:10px;padding:14px 16px;
+  }
+  .shared-note .stitle{font-size:12px;font-weight:600;color:var(--ink);margin-bottom:6px;display:flex;align-items:center;gap:8px;}
+  .shared-note p{font-size:11.5px;color:var(--muted);line-height:1.6;margin:0 0 8px;}
+  .shared-note ul{margin:0 0 8px;padding-left:18px;font-size:11.5px;color:var(--muted);line-height:1.7;}
+  .shared-note .flag{font-size:11px;color:#9A3412;background:#FFF3EA;border:1px solid #FFD9C2;border-radius:8px;padding:8px 12px;}
+
+  /* package assembly — prominent */
+  .pkg-hero{
+    background:linear-gradient(180deg,#FFF6F1,#fff);border:1.5px solid var(--accent);border-radius:14px;padding:26px 28px;
+  }
+  .pkg-hero .kicker2{font-size:12px;color:var(--accent);font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px;}
+  .pkg-hero h2{font-size:22px;margin:0 0 10px;font-weight:700;}
+  .pkg-hero p.def{font-size:13.5px;color:var(--ink-soft);max-width:760px;line-height:1.6;margin:0 0 20px;}
+  .funnel{display:flex;align-items:center;justify-content:center;gap:22px;margin:6px 0 26px;flex-wrap:wrap;}
+  .funnel .n163{font-size:34px;font-weight:700;font-family:var(--font-mono);color:var(--ink);}
+  .funnel .lbl{font-size:11px;color:var(--muted);margin-top:2px;}
+  .funnel .fnl-arrow{font-size:26px;color:var(--accent);}
+  .funnel .n1{font-size:34px;font-weight:700;font-family:var(--font-mono);color:var(--accent);}
+
+  .packagecard{
+    border:2px solid var(--accent);border-radius:14px;padding:20px 22px;background:#fff;max-width:640px;margin:0 auto;
+  }
+  .packagecard .pid{font-family:var(--font-mono);font-size:11px;color:var(--accent);font-weight:700;letter-spacing:.03em;}
+  .packagecard h3{margin:4px 0 14px;font-size:16px;font-weight:700;}
+  .pkg-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;}
+  .pkg-field{margin-bottom:10px;}
+  .pkg-field .k{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700;margin-bottom:3px;}
+  .pkg-field .v{font-size:12.5px;color:var(--ink);line-height:1.4;}
+  .evidencelist{display:flex;flex-wrap:wrap;gap:6px;}
+  .evidencelist span{font-size:10.5px;background:var(--surface-alt);border:1px solid var(--line);border-radius:7px;padding:4px 8px;color:var(--ink-soft);}
+  .engineused-tags{display:flex;gap:6px;flex-wrap:wrap;}
+  .engineused-tags span{font-size:10.5px;background:var(--teal-soft);color:var(--teal);border-radius:7px;padding:4px 8px;font-weight:600;}
+
+  /* package example strip */
+  .example-strip{display:flex;flex-direction:column;gap:10px;margin-top:26px;}
+  .example-strip .strip-title{font-size:12px;font-weight:700;color:var(--ink);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;}
+  .example-card{border:1px solid var(--line);border-radius:10px;background:#fff;overflow:hidden;cursor:pointer;}
+  .example-card .head{display:flex;align-items:center;gap:14px;padding:14px 16px;flex-wrap:wrap;}
+  .example-card .head .name{font-size:13px;font-weight:600;flex:1;min-width:220px;}
+  .example-card .head .stat-mini{font-size:11.5px;color:var(--muted);font-family:var(--font-mono);}
+  .example-card .head .action-mini{font-size:11px;font-weight:600;color:var(--accent);}
+  .example-card .head .chev{color:var(--muted);}
+  .example-card.open .head .chev{transform:rotate(90deg);}
+  .example-card .body{display:none;padding:0 16px 16px;font-size:12px;color:var(--ink-soft);line-height:1.6;border-top:1px solid var(--line);}
+  .example-card.open .body{display:block;padding-top:14px;}
+  .example-card .body .engines{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0;}
+  .example-card .body .engines span{font-size:10.5px;font-weight:600;border-radius:7px;padding:4px 8px;}
+  .example-card .body .engines span.used{background:var(--teal-soft);color:var(--teal);}
+  .example-card .body .engines span.notused{background:var(--surface-alt);color:var(--muted);text-decoration:line-through;}
+
+  .routing-principle{
+    margin-top:18px;text-align:center;font-size:12.5px;color:var(--ink-soft);background:var(--surface-alt);
+    border-radius:10px;padding:12px 16px;
+  }
+  .routing-principle b{color:var(--ink);}
+
+  /* gate */
+  .gate{background:linear-gradient(180deg,#FFF6F1,#fff);border:1.5px solid var(--accent);border-radius:14px;padding:20px 26px;text-align:center;}
+  .gate .stage-label{justify-content:center;}
+  .gate .stage-label .num{background:var(--accent);}
+  .gate p{font-size:12.5px;color:var(--ink-soft);max-width:560px;margin:8px auto 0;line-height:1.6;}
+  .gate .roles{display:flex;justify-content:center;gap:10px;margin-top:14px;flex-wrap:wrap;}
+  .gate .roles span{font-size:11.5px;background:#fff;border:1px solid var(--line);border-radius:20px;padding:5px 14px;}
+
+  .feedback-row{display:flex;gap:14px;flex-wrap:wrap;margin-top:16px;}
+  .feedback-row .card{border-left:3px solid var(--teal);}
+  .feedback-row .card.warn{border-left-color:var(--accent);}
+  .loop-note{margin-top:18px;font-size:12px;color:var(--muted);border-top:1px solid var(--line);padding-top:14px;}
+
+  .model-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;}
+  .model-card{background:var(--surface-alt);border:1px solid var(--line);border-radius:10px;padding:12px 14px;}
+  .model-card h4{font-size:12.5px;margin:0 0 8px;font-weight:600;}
+  .model-card ul{margin:0;padding:0;list-style:none;}
+  .model-card li{font-family:var(--font-mono);font-size:10px;color:var(--ink-soft);padding:2px 0;border-bottom:1px dashed var(--line);}
+  .model-card li:last-child{border-bottom:none;}
+  .model-card li i{color:var(--muted);font-style:normal;}
+
+  .section-title{font-size:13px;font-weight:600;color:var(--ink);margin:0 0 14px;display:flex;align-items:center;gap:8px;}
+  .section-title .num{width:26px;height:26px;border-radius:7px;background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;font-family:var(--font-mono);}
+
+  .closing-block{
+    margin-top:44px;text-align:center;padding:36px 24px;background:var(--ink);border-radius:14px;color:#fff;
+  }
+  .closing-block h2{font-size:20px;font-weight:700;margin:0 0 10px;max-width:640px;margin-left:auto;margin-right:auto;line-height:1.4;}
+  .closing-block .sub{font-size:13px;color:#B6BBC2;max-width:600px;margin:0 auto;line-height:1.6;}
+
+  .footer-note{margin-top:32px;font-size:11.5px;color:var(--muted);text-align:center;}
+  .footer-note a{color:var(--accent);text-decoration:none;font-weight:600;}
+
+  @media(max-width:900px){
+    .model-grid{grid-template-columns:repeat(2,1fr);}
+    .legendgrid{grid-template-columns:repeat(2,1fr);}
+    .agenttypes{grid-template-columns:1fr;}
+    .pkg-grid{grid-template-columns:1fr 1fr;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="page">
+    <div class="kicker">RevCompass · Consolidated System Architecture</div>
+    <h1>RevCompass converts claim-level variances into evidence-backed recovery cohorts</h1>
+    <p class="sub">Deterministic analytics identify patterns, Gemini-powered agents investigate and recommend, and humans approve before action. RevCompass sits above your existing EHR / RCM system of record — it does not replace it.</p>
+    <div class="principle-pill">🧭 Design principle — <b>Gemini reasons. Tools compute. Humans approve.</b></div>
+  </header>
+
+  <div class="status-legend">
+    <div class="item"><span class="swatch built"></span>Built for hackathon — running on synthetic data</div>
+    <div class="item"><span class="swatch roadmap"></span>Designed — near-term or longer-term roadmap</div>
+  </div>
+
+  <!-- ============ LAYER 1 — DATA SOURCES ============ -->
+  <div class="layer-title"><span class="tag-num">L1</span><h2 class="big">Data Sources</h2><div class="line-fill"></div></div>
+  <div class="stage">
+    <div class="stage-label">
+      <div class="num">1</div>
+      <h2>Ingestion &amp; Doc Understanding</h2>
+      <span class="badge-built">Built · hackathon MVP</span>
+      <div class="tag">async · nightly batch</div>
+    </div>
+    <p class="desc">Eight upstream systems feed RevCompass, structured into a common schema before anything else happens.</p>
+    <div class="row">
+      <div class="card"><h3>837 · Claims</h3><p>Billed CPT/HCPCS/DRG, payer, dates of service.</p></div>
+      <div class="card"><h3>835 · Remits</h3><p>CARC/RARC, paid amount, adjustment reason.</p></div>
+      <div class="card"><h3>Contracts &amp; policy docs</h3><p>Fee schedules, carve-outs, payer bulletins — multimodal, incl. scanned PDFs.</p></div>
+      <div class="card"><h3>Historical appeal outcomes</h3><p>Prior appeal / recovery results by payer, reason, and action.</p></div>
+      <div class="card"><h3>Finance / write-off data</h3><p>Which variances were pursued vs. written off, and why.</p></div>
+      <div class="card"><h3>Reference dictionaries</h3><p>CARC/RARC, CPT/HCPCS/DRG code sets.</p></div>
+    </div>
+    <div class="schema">
+      <span>→ VarianceRecord</span>
+      <span>payer_id</span><span>cpt_or_drg</span><span>carc_rarc[]</span>
+      <span>variance_type</span><span>variance_amount</span><span>timely_filing_deadline</span>
+    </div>
+    <div class="failure-strip">
+      <div class="ft">Failure &amp; fallback</div>
+      <ul>
+        <li>Malformed or unparseable 837/835 → quarantined to a review queue, batch continues; daily alert if quarantine rate exceeds 2%.</li>
+        <li>Contract/policy PDF fails OCR (poor scan quality) → flagged "unindexed," excluded from retrieval until manually re-uploaded — never silently skipped.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="connector"><div class="stem"></div>de-identification applied here — PHI never proceeds past this point</div>
+
+  <!-- ============ LAYER 2 — PRIVACY + DATA STRUCTURING ============ -->
+  <div class="layer-title"><span class="tag-num">L2</span><h2 class="big">Privacy &amp; Data Structuring</h2><div class="line-fill"></div></div>
+  <div class="stage">
+    <div class="stage-label">
+      <div class="num">2</div>
+      <h2>De-identification Boundary</h2>
+      <span class="badge-built">Built · hackathon MVP</span>
+    </div>
+    <p class="desc">Synthetic / de-identified data only in the hackathon MVP — PHI does not enter LLM processing. Parsing and document indexing happen here, before any reasoning stage sees a record.</p>
+    <div class="row">
+      <div class="card"><h3>De-identification</h3><p>Direct identifiers stripped before any record is structured or indexed.</p></div>
+      <div class="card"><h3>Document indexing</h3><p>Contracts and policies chunked and embedded for grounded retrieval later in the pipeline.</p></div>
+      <div class="card"><h3>Production posture</h3><p>Runs under a BAA with de-identification and a HIPAA-configured Vertex AI deployment; clinical-note RCA is deferred until that environment is in place.</p></div>
+    </div>
+  </div>
+
+  <!-- ============ LAYER 3 — VARIANCE INTELLIGENCE FOUNDATION ============ -->
+  <div class="layer-title"><span class="tag-num">L3</span><h2 class="big">Variance Intelligence Foundation</h2><div class="line-fill"></div></div>
+
+  <div class="stage">
+    <div class="stage-label">
+      <div class="num">3</div>
+      <h2>Variance Signature Layer</h2>
+      <span class="badge-built">Built · hackathon MVP</span>
+    </div>
+    <p class="desc">Before a claim can be compared to any other claim, it is decomposed into a structured signature. This is what makes 163 unrelated-looking claims comparable in the first place.</p>
+    <div class="sig-flow">
+      <div class="claimcard">
+        <div class="h">Incoming claim</div>
+        <div class="attrwrap">
+          <span class="attr"><b>Payer:</b> BCBS Texas</span>
+          <span class="attr"><b>Variance type:</b> Denial · Medical necessity</span>
+          <span class="attr"><b>CARC/RARC:</b> CO-50</span>
+          <span class="attr"><b>CPT:</b> 22612</span>
+          <span class="attr"><b>Service line:</b> Orthopedics</span>
+          <span class="attr"><b>Location:</b> Hospital A</span>
+          <span class="attr"><b>DOS window:</b> Jun–Aug</span>
+          <span class="attr"><b>Expected reimb.:</b> $42,000</span>
+          <span class="attr"><b>Actual reimb.:</b> $0</span>
+          <span class="attr"><b>Variance:</b> $42,000</span>
+          <span class="attr"><b>Filing deadline:</b> Sep 12</span>
+        </div>
+      </div>
+      <div class="arrow-mid">→</div>
+      <div class="sigcard">
+        <div class="h">Structured variance signature</div>
+        <div class="sigrow"><span>Payer</span><b>BCBS Texas</b></div>
+        <div class="sigrow"><span>Variance type</span><b>Denial · CO-50</b></div>
+        <div class="sigrow"><span>Procedure</span><b>Spinal fusion (22612)</b></div>
+        <div class="sigrow"><span>Service line</span><b>Orthopedics</b></div>
+        <div class="sigrow"><span>Location</span><b>Hospital A</b></div>
+        <div class="sigrow"><span>DOS window</span><b>Jun–Aug</b></div>
+        <div class="sigrow"><span>Variance amount</span><b>$42,000</b></div>
+        <div class="sigrow"><span>Filing deadline</span><b>Sep 12</b></div>
+        <div class="deterministic-tag">Deterministic feature construction — not LLM reasoning</div>
+      </div>
+    </div>
+    <div class="failure-strip" style="background:#F2F6FF;border-color:#C7D6F5;">
+      <div class="ft" style="color:#1E3A8A;">Variance taxonomy — "variance type" is broader than "denial type"</div>
+      <ul style="color:#1E3A8A;">
+        <li><b>Contractual adjustment</b> — expected, rules-based reduction per an active vendor contract; only treated as a variance worth working if no active contract explains it.</li>
+        <li><b>Denial</b> — payer refused payment; carries CARC/RARC.</li>
+        <li><b>Write-off</b> — no further recovery path; terminal disposition.</li>
+        <li><b>True underpayment</b> — paid below the contracted rate with no denial code; evaluated against fee-schedule terms, not CARC/RARC.</li>
+      </ul>
+      <div style="margin-top:8px;font-size:12px;color:#1E3A8A;">A single claim can carry multiple CARC/RARC codes — the <b>primary</b> code (highest dollar impact) drives classification; secondary codes stay on the record as evidence but don't split the claim across cohorts. An active-contract check runs first to separate contractual adjustments from true variances.</div>
+    </div>
+    <div class="failure-strip" style="background:#F2F6FF;border-color:#C7D6F5;">
+      <div class="ft" style="color:#1E3A8A;">Classification degrees</div>
+      <ul style="color:#1E3A8A;">
+        <li><b>1st degree:</b> payer + denial / variance category.</li>
+        <li><b>2nd degree:</b> CPT/DRG family + service line.</li>
+        <li><b>3rd degree:</b> location + variance-amount band.</li>
+      </ul>
+      <div style="margin-top:8px;font-size:12px;color:#1E3A8A;">Timely-filing deadline is <b>not</b> a classification factor — two claims that match on the factors above belong in the same cohort even if their filing windows differ. Filing deadline only sets action urgency downstream.</div>
+    </div>
+  </div>
+
+  <div class="connector"><div class="stem"></div>many signatures accumulate before clustering runs</div>
+
+  <div class="stage">
+    <div class="stage-label">
+      <div class="num">4</div>
+      <h2>Pattern Detection / Clustering</h2>
+      <span class="badge-built">Built · hackathon MVP</span>
+    </div>
+    <p class="desc">Groups statistically and operationally similar variance signatures into candidate cohorts based on payer, denial reason, procedure, timing, location and financial pattern.</p>
+    <div class="cluster-row">
+      <div class="clusterbubble hot"><div class="n">Spinal fusion · CO-50</div><div class="c">BCBS Texas · Jun–Aug</div><div class="v">163</div></div>
+      <div class="clusterbubble"><div class="n">Ortho contract rate</div><div class="c">United Healthcare</div><div class="v">412</div></div>
+      <div class="clusterbubble"><div class="n">Auth denials</div><div class="c">Location A</div><div class="v">287</div></div>
+      <div class="clusterbubble"><div class="n">Timely filing</div><div class="c">low-value cohort</div><div class="v">640</div></div>
+    </div>
+    <div class="guardrail-note">
+      <b>Guardrail —</b> clustering identifies a pattern; it does not prove root cause. Deterministic signature matching and analytics-driven cohorting run first (payer × CARC/RARC × CPT/DRG family × variance band); Gemini may only merge or split a candidate cohort when independent evidence spans converge on the same clause — never on narrative similarity alone. The root-cause hypothesis only emerges downstream, after evidence and reasoning are applied.
+    </div>
+    <div class="failure-strip" style="background:#FFF9F5;border-color:#FFD9C2;">
+      <div class="ft">Confidence, ambiguity &amp; priority at the cohort stage</div>
+      <ul>
+        <li>Each candidate cohort carries its own <b>cohesion confidence</b> — how tightly its member claims actually match — separate from the disposition confidence scored later.</li>
+        <li><b>Ambiguous claims</b> (ones that could plausibly belong to two cohorts) route to a <b>human-in-the-loop</b> grouping decision before any downstream reasoning is spent on them.</li>
+        <li><b>Cohort priority</b> is ranked by dollar exposure first, timely-filing urgency second.</li>
+      </ul>
+      <div style="margin-top:8px;font-size:12px;color:var(--muted);">Naming: a group of claims is a <b>cohort</b> — the unit that's clustered, enriched, decided and tracked as one. A <b>package</b> is the claim-level artifact produced on approval and filed with the payer (one appeal or resubmission per claim).</div>
+    </div>
+  </div>
+
+  <!-- ============ LAYER 4 — REVCOMPASS INTELLIGENCE CORE ============ -->
+  <div class="layer-title"><span class="tag-num">L4</span><h2 class="big">RevCompass Intelligence Core</h2><div class="line-fill"></div></div>
+
+  <div class="stage">
+    <div class="stage-label">
+      <div class="num">5</div>
+      <h2>RevCompass Intelligence Core</h2>
+      <div class="tag">per-engagement · siloed</div>
+    </div>
+    <p class="desc">Each cohort flows through the capabilities in a defined sequence — the Orchestrator sets which capabilities are active for a given variance pattern, but the order is fixed. Variance amounts are consumed from upstream, never re-retrieved or recalculated here.</p>
+
+    <div class="failure-strip" style="background:#FFF9F5;border-color:#FFD9C2;">
+      <div class="ft">Capability sequence per cohort <span style="font-weight:400;font-style:italic;color:var(--muted);">— to confirm with Shaun</span></div>
+      <ul>
+        <li><b>1. Root-cause identification</b> — form a hypothesis (e.g. for underpayments, a candidate explanation a user can manually verify).</li>
+        <li><b>2. Next-best-action reasoning</b> — the responsible agent works the hypothesis toward a resolution path.</li>
+        <li><b>3. Payer pattern detection</b> — check the hypothesis against this client's payer behavior history.</li>
+        <li><b>4. Disposition decision</b> — based on the above, decide appeal / write-off / resubmit for the cohort; if appeal, produce the claim-level packages for filing.</li>
+      </ul>
+      <div style="margin-top:8px;font-size:12px;color:var(--muted);">No variance retrieval or recalculation happens in this core — that is already computed upstream in the Signature Layer and consumed as-is.</div>
+    </div>
+
+    <div class="legendgrid">
+      <div class="legendcard"><div class="k" style="color:var(--teal);">ENGINE</div><div class="d">A business capability — Payer Behavior, Denial Disposition, or Contract Variance.</div></div>
+      <div class="legendcard"><div class="k" style="color:var(--blue);">AGENT</div><div class="d">A specialized AI worker executing part of an engine's capability.</div></div>
+      <div class="legendcard"><div class="k" style="color:var(--ink-soft);">TOOL</div><div class="d">A deterministic calculation or retrieval step — no LLM reasoning involved.</div></div>
+      <div class="legendcard"><div class="k" style="color:var(--accent);">COHORT / PACKAGE</div><div class="d">The <b>cohort</b> is the action-ready unit — claims, exposure, evidence, hypothesis, action, confidence. A <b>package</b> is the per-claim artifact it produces for filing.</div></div>
+    </div>
+
+    <div class="orchestrator"><div class="dot"></div> Orchestrator Agent — ADK supervisor · cohort identified → evaluates variance type → activates relevant capabilities, run in the fixed sequence above · variance never re-derived here</div>
+
+    <div class="scenario-toggle">
+      <button class="scenario-btn active" data-scn="A" onclick="setScenario('A')">Scenario A — Medical necessity denial</button>
+      <button class="scenario-btn" data-scn="B" onclick="setScenario('B')">Scenario B — Contract underpayment</button>
+    </div>
+    <p class="desc" style="margin:10px 0 4px;">The three engines <b>are</b> the capabilities in that sequence — Contract Variance does root-cause for underpayments (step 1), Payer Behavior does pattern detection (step 3), Denial Disposition makes the call (step 4). Every cohort runs the sequence; which engines light up depends on its variance type.</p>
+
+    <div class="enginebar" id="enginebar"></div>
+    <div class="guardrail-note" id="scenario-note"></div>
+
+    <div class="enginedetail-list" id="engineDetailList"></div>
+
+    <div class="agenttypes">
+      <div>
+        <h5>Shared agents (reused across engines)</h5>
+        <div class="agentrow">
+          <div class="agentchip"><span class="avatar"></span><span>Orchestrator Agent</span><span class="role">routes engines</span></div>
+          <div class="agentchip"><span class="avatar"></span><span>Evidence Retrieval Agent</span><span class="role">gathers support</span></div>
+          <div class="agentchip"><span class="avatar"></span><span>Reasoning Agent</span><span class="role">core inference</span></div>
+          <div class="agentchip"><span class="avatar"></span><span>Citation / Grounding Agent</span><span class="role">evidence sourcing</span></div>
+          <div class="agentchip"><span class="avatar"></span><span>Outcome Validation Agent</span><span class="role">learning loop</span></div>
+        </div>
+      </div>
+      <div>
+        <h5>Specialized agents</h5>
+        <div class="agentrow">
+          <div class="agentchip"><span class="avatar" style="background:var(--accent);"></span><span>Payer Intelligence Agent</span><span class="role">Engine 1</span></div>
+          <div class="agentchip"><span class="avatar" style="background:var(--accent);"></span><span>Disposition Agent</span><span class="role">Engine 2</span></div>
+          <div class="agentchip"><span class="avatar" style="background:var(--accent);"></span><span>Contract Reasoning Agent</span><span class="role">Engine 3</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="shared-note">
+      <div class="stitle">🔒 Payer Intelligence — built from this client's own historical data</div>
+      <p>Payer fingerprints are built per engagement from the client's own history. Payer-level intelligence draws on:</p>
+      <ul>
+        <li>This client's historical appeal / recovery outcomes</li>
+        <li>This client's remit history and denial/underpayment patterns</li>
+        <li>Published payer policies and public regulatory / transparency sources</li>
+      </ul>
+      <div class="flag">Each client's fingerprint and overturn-rate tables are siloed to that client. There is no pooling of behavior across clients.</div>
+    </div>
+
+    <div class="failure-strip">
+      <div class="ft">Failure &amp; fallback (reasoning core)</div>
+      <ul>
+        <li>No evidence span above the similarity threshold → "insufficient evidence," the cohort routes to manual research, never auto-recommended.</li>
+        <li>Gemini call times out or errors → one retry with backoff; second failure routes the cohort to manual review with the error logged, not silently dropped.</li>
+        <li>Contract exceeds context window in one pass → chunked retrieval fallback rather than truncation.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ============ LAYER 5 — COHORT ASSEMBLY ============ -->
+  <div class="layer-title"><span class="tag-num">L5</span><h2 class="big">Cohort Assembly</h2><div class="line-fill"></div></div>
+
+  <div class="pkg-hero">
+    <div class="kicker2">Cohort Assembly — the actionable output</div>
+    <h2>The cohort — not the individual claim — is the actionable unit of work.</h2>
+    <p class="def">A cohort is a group of claims sharing a meaningful variance pattern, enriched with evidence, financial exposure, root-cause hypothesis, recommended action, expected recovery and confidence. It's decided once, as a unit — then, on approval, it produces the claim-level <b>packages</b> actually filed with the payer (one appeal or resubmission per claim).</p>
+
+    <div class="funnel">
+      <div><div class="n163">163</div><div class="lbl">individual claims</div></div>
+      <div class="fnl-arrow">→</div>
+      <div><div class="n1">1</div><div class="lbl">action-ready cohort</div></div>
+    </div>
+
+    <div class="packagecard">
+      <div class="pid">COHORT #RC-00271</div>
+      <h3>BCBS Texas — Spinal Fusion Medical Necessity</h3>
+      <div class="pkg-grid">
+        <div class="pkg-field"><div class="k">Payer</div><div class="v">BCBS Texas</div></div>
+        <div class="pkg-field"><div class="k">Variance type</div><div class="v">Denial · Medical necessity</div></div>
+        <div class="pkg-field"><div class="k">Affected claims</div><div class="v">163</div></div>
+        <div class="pkg-field"><div class="k">Exposure</div><div class="v">$1.7M</div></div>
+        <div class="pkg-field"><div class="k">Expected recovery</div><div class="v">$1.1M</div></div>
+        <div class="pkg-field"><div class="k">Confidence</div><div class="v">89%</div></div>
+      </div>
+      <div class="pkg-field"><div class="k">Pattern</div><div class="v">Payer behavior drift: BCBS Texas denial rate rose materially after June 3, concentrated in spinal fusion (CPT 22612), measured against this client's trailing 12-month payer history.</div></div>
+      <div class="pkg-field"><div class="k">Root-cause hypothesis</div><div class="v">Potential payer policy change (May 28 revision) — hypothesis, not proven causality</div></div>
+      <div class="pkg-field"><div class="k">Recommended action</div><div class="v">Appeal — decided once for the cohort, filed as one package per claim</div></div>
+      <div class="pkg-field"><div class="k">Evidence</div>
+        <div class="evidencelist">
+          <span>CO-50 denial pattern</span><span>Payer policy §4.2</span><span>May 28 policy revision</span>
+          <span>84 comparable historical cases</span><span>78% historical overturn rate</span>
+        </div>
+      </div>
+      <div class="pkg-field"><div class="k">Engines used</div>
+        <div class="engineused-tags"><span>Payer Behavior</span><span>Denial Disposition</span></div>
+      </div>
+    </div>
+
+    <div class="example-strip">
+      <div class="strip-title">Different patterns → different engine combinations</div>
+
+      <div class="example-card" onclick="this.classList.toggle('open')">
+        <div class="head">
+          <span class="name">BCBS spinal-fusion medical necessity denials</span>
+          <span class="stat-mini">163 claims · $1.7M</span>
+          <span class="action-mini">Appeal</span>
+          <span class="chev">▸</span>
+        </div>
+        <div class="body">
+          <div class="engines">
+            <span class="used">Payer Behavior ✓</span><span class="used">Denial Disposition ✓</span><span class="notused">Contract Variance</span>
+          </div>
+          Denial rate drift detected against baseline; disposition engine recommends coordinated appeal given a 78% historical overturn rate for this payer × reason combination.
+        </div>
+      </div>
+
+      <div class="example-card" onclick="this.classList.toggle('open')">
+        <div class="head">
+          <span class="name">UHC orthopedic contract-rate variance</span>
+          <span class="stat-mini">412 claims · $620K</span>
+          <span class="action-mini">Validate rate + payer recovery</span>
+          <span class="chev">▸</span>
+        </div>
+        <div class="body">
+          <div class="engines">
+            <span class="notused">Payer Behavior</span><span class="used">Contract Variance ✓</span><span class="used">Denial Disposition / Recovery ✓</span>
+          </div>
+          An updated orthopedic rate effective July 1 may not have been applied consistently. Contract Variance explains the underpayment; Disposition recommends validating configuration and initiating payer recovery.
+        </div>
+      </div>
+
+      <div class="example-card" onclick="this.classList.toggle('open')">
+        <div class="head">
+          <span class="name">Authorization denials concentrated at Location A</span>
+          <span class="stat-mini">287 claims · $840K</span>
+          <span class="action-mini">Correct/resubmit + prevention ticket</span>
+          <span class="chev">▸</span>
+        </div>
+        <div class="body">
+          <div class="engines">
+            <span class="used">Payer Behavior ✓</span><span class="used">Denial Disposition ✓</span><span class="notused">Contract Variance</span>
+          </div>
+          Likely issue: internal authorization workflow failure, not payer-driven. Recommended action pairs claim correction/resubmission with a prevention ticket into the owning team's existing queue.
+        </div>
+      </div>
+
+      <div class="example-card" onclick="this.classList.toggle('open')">
+        <div class="head">
+          <span class="name">Low-value, low-overturn denial cohort</span>
+          <span class="stat-mini">640 claims · $95K</span>
+          <span class="action-mini">Do not pursue / write off</span>
+          <span class="chev">▸</span>
+        </div>
+        <div class="body">
+          <div class="engines">
+            <span class="notused">Payer Behavior</span><span class="used">Denial Disposition ✓</span><span class="notused">Contract Variance</span>
+          </div>
+          Historical overturn rate and effort-to-pursue don't justify appeal. Disposition alone recommends write-off per policy — no behavior drift or contract question to investigate.
+        </div>
+      </div>
+    </div>
+
+    <div class="routing-principle">Every cohort runs the fixed capability sequence; within it, the Orchestrator activates only the engines a given variance pattern needs (e.g. Contract Variance stays off when there is no underpayment question).</div>
+
+    <div class="failure-strip" style="background:#FFF9F5;border-color:#FFD9C2;margin-top:18px;">
+      <div class="ft">From cohort to work — assignment, drafting &amp; Epic sync</div>
+      <ul>
+        <li><b>Manual team assignment</b> — each cohort can be routed to the right team (e.g. Appeals Filing, Coding, Scheduling/Auth); the assigned team is shown on the cohort.</li>
+        <li><b>Appeal Package Drafter</b> — when the action is appeal, drafts the letter from a repository of <b>payer-specific appeal templates</b>, surfacing the best-fit template for the analyst to edit before submission.</li>
+        <li><b>Workqueue &amp; Epic sync</b> — an approved cohort's packages become tasks in the owning team's existing workqueue and sync back into Epic, so RevCompass never becomes a second system to check separately.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ============ LAYER 6 — HUMAN DECISION ============ -->
+  <div class="layer-title"><span class="tag-num">L6</span><h2 class="big">Human Decision</h2><div class="line-fill"></div></div>
+
+  <div class="gate">
+    <div class="stage-label">
+      <div class="num">6</div>
+      <h2>Human Approval Gate</h2>
+      <span class="badge-built">Built · hackathon MVP</span>
+    </div>
+    <p>Every cohort — evidence, confidence breakdown, recommended action, expected value — is reviewed before anything reaches a payer. Approve, edit, or reject. Edits are diffed and logged; rejections are logged as outcomes and feed the loop below.</p>
+    <div class="roles">
+      <span>Analyst — approve / edit / reject</span>
+      <span>Supervisor — override low-confidence, with justification</span>
+      <span>Director — read-only, executive summary across all cohorts</span>
+    </div>
+  </div>
+
+  <!-- ============ LAYER 7 — OUTCOME + LEARNING ============ -->
+  <div class="layer-title"><span class="tag-num">L7</span><h2 class="big">Outcome &amp; Learning</h2><div class="line-fill"></div></div>
+
+  <div class="stage">
+    <div class="stage-label">
+      <div class="num">7</div>
+      <h2>Action &amp; Outcome</h2>
+      <span class="badge-built">Built · hackathon MVP</span>
+      <div class="tag">event-driven</div>
+    </div>
+    <div class="row">
+      <div class="card"><h3>Appeal / resubmission packages</h3><p>The approved cohort produces one filing package per claim, submitted to the payer or RCM system of record.</p></div>
+      <div class="card"><h3>Per-claim outcome capture</h3><p>Payer response splits back to claim level — a cohort rarely resolves uniformly.</p></div>
+    </div>
+    <div class="feedback-row">
+      <div class="card"><h3>→ Feeds Payer Fingerprint</h3><p>Confirms or dampens the drift signal that triggered the cohort.</p></div>
+      <div class="card"><h3>→ Feeds Overturn-Rate Table</h3><p>Updates p(overturn) for this payer × reason × action going forward.</p></div>
+      <div class="card warn"><h3>→ Re-opens Clustering</h3><p>A claim that resolves differently from its cohort majority is flagged as possibly mis-grouped.</p></div>
+      <div class="card warn"><h3>→ Prevent ticket</h3><p>Internal root causes (auth workflow, coding) route into the owning team's existing queue — not a new inbox. Closes when drift reverses.</p></div>
+    </div>
+    <div class="loop-note">The loop closes here: outcomes recalibrate the confidence formula, the fingerprint, and — when a claim breaks pattern — the clustering itself.</div>
+  </div>
+
+  <!-- SECURITY & GUARDRAILS -->
+  <div class="stage" style="margin-top:22px;">
+    <div class="stage-label"><div class="num">🛡</div><h2>Security &amp; Guardrails</h2></div>
+    <div class="row">
+      <div class="card"><h3>Model Armor</h3><p>Prompt-injection defense on ingested contract/policy PDFs — untrusted text is wrapped in a fixed delimiter the model is instructed never to treat as instructions; directive-sounding spans are excluded from evidence.</p></div>
+      <div class="card"><h3>IAM &amp; access control</h3><p>Analyst / Supervisor / Director roles with distinct permissions — Director is read-only across all cohorts, with no approve, assign, or draft actions.</p></div>
+      <div class="card"><h3>Full audit log</h3><p>Every cohort logs its evidence snapshot, model version, tool outputs, and the named approver — frozen at decision time, not reconstructed after the fact.</p></div>
+      <div class="card"><h3>BAA + de-identification</h3><p>Production runs under a BAA with de-identification and a HIPAA-configured Vertex AI deployment.</p></div>
+    </div>
+  </div>
+
+  <!-- DATA MODEL -->
+  <div style="margin-top:40px;">
+    <div class="section-title"><div class="num">✳</div>Data model reference</div>
+    <div class="model-grid">
+      <div class="model-card">
+        <h4>VarianceRecord</h4>
+        <ul><li><i>id, claim_id</i></li><li><i>payer_id, cpt_drg</i></li><li><i>carc_rarc[]</i></li><li><i>variance_type</i></li><li><i>variance_amount</i></li><li><i>filing_deadline</i></li></ul>
+      </div>
+      <div class="model-card">
+        <h4>Cohort</h4>
+        <ul>
+          <li><i>id, member_claim_ids[]</i></li>
+          <li><i>signature{}</i></li>
+          <li><i>engines_used[]</i></li>
+          <li><i>root_cause_hypothesis</i></li>
+          <li><i>cited_evidence[]</i></li>
+          <li><i>exposure, expected_recovery</i></li>
+          <li><i>confidence</i></li>
+          <li><i>recommended_action</i></li>
+          <li><i>assigned_team, status</i></li>
+        </ul>
+      </div>
+      <div class="model-card">
+        <h4>Package <span style="font-weight:400;color:var(--muted);font-size:11px;">(claim-level)</span></h4>
+        <ul>
+          <li><i>id, cohort_id</i></li>
+          <li><i>claim_id</i></li>
+          <li><i>action (appeal / resubmit)</i></li>
+          <li><i>drafted_artifact_ref</i></li>
+          <li><i>workqueue / epic_task_id</i></li>
+          <li><i>submitted_at, status</i></li>
+        </ul>
+      </div>
+      <div class="model-card">
+        <h4>Decision</h4>
+        <ul><li><i>cohort_id</i></li><li><i>action</i></li><li><i>p_recovery</i></li><li><i>expected_value</i></li><li><i>confidence_bucket</i></li><li><i>confidence_components{}</i></li></ul>
+      </div>
+      <div class="model-card">
+        <h4>Outcome</h4>
+        <ul><li><i>cohort_id</i></li><li><i>per_claim_results[]</i></li><li><i>total_recovered</i></li><li><i>days_to_resolution</i></li><li><i>feeds_into[]</i></li></ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="closing-block">
+    <h2>The cohort — not the individual claim — is the actionable unit of work.</h2>
+    <div class="sub">RevCompass converts thousands of denials and underpayments into a smaller number of prioritized, evidence-backed actions.</div>
+  </div>
+
+  <div class="footer-note">RevCompass — Build with Gemini, Round 2 · Illustrative architecture on synthetic data</div>
+</div>
+
+<script>
+  const engineMeta = {
+    1: {
+      name:'Engine 1 — Payer Behavior Engine',
+      step:'Executes sequence step 3 — Payer pattern detection',
+      cap:'Detects abnormal changes in payer behavior versus historical baseline.',
+      inputs:'Denial rate, CARC/RARC mix, CPT/DRG, days to pay, downgrade rate, underpayment rate, appeal/overturn rate, current vs. historical baseline',
+      agents:'Payer Intelligence Agent, Evidence Retrieval Agent, Reasoning Agent',
+      tools:'Rolling-window comparison (trailing 30d vs. prior 90d) against a stated threshold',
+      outputs:'Drift signal, payer fingerprint, behavioral context, root-cause hypothesis inputs',
+      guardrail:'Threshold-based comparison, not unsupervised anomaly detection. Hypothesis, not proven causality.',
+      example:'BCBS Texas denial rate rose 4.2% → 11.7% (2.8×) after June 3, concentrated in spinal fusion — feeds Cohort #RC-00271.'
+    },
+    2: {
+      name:'Engine 2 — Denial Disposition Engine',
+      step:'Executes sequence step 4 — Disposition decision',
+      cap:'Determines the best action for a denial or recovery cohort.',
+      inputs:'Historical appeal outcomes, payer behavior, denial reason, procedure, dollars at risk, filing deadline, recovery probability, effort to pursue',
+      agents:'Historical Outcome Agent, Disposition Agent, Evidence Retrieval Agent',
+      tools:'Deterministic recovery model (expected value = exposure × p(overturn))',
+      outputs:'Recommended action (appeal / correct-resubmit / do-not-pursue / prevent / escalate), expected recovery, recovery probability, confidence, priority',
+      guardrail:'confidence = 0.4×evidence_strength + 0.3×cluster_cohesion + 0.3×outcome_reliability. High ≥0.75 auto-recommends, Low <0.5 always routes to manual review. All dollars/probabilities from tools; Gemini narrates, never computes.',
+      example:'163-claim BCBS cohort → Appeal; on approval, filed as one package per claim, expected recovery ≈$1.1M.'
+    },
+    3: {
+      name:'Engine 3 — Contract Variance Engine',
+      step:'Executes sequence step 1 — Root-cause identification (for underpayment/variance cohorts)',
+      cap:'Explains and prioritizes underpayment / contractual variance.',
+      inputs:'Expected reimbursement, actual reimbursement, contract terms, amendments, payer policies, effective dates, similar historical variances',
+      agents:'Contract Retrieval Agent, Contract Reasoning Agent, Effective-Date logic',
+      tools:'Deterministic expected-vs-actual variance calculation (consumed, not rebuilt, from the upstream system)',
+      outputs:'Likely variance explanation, exposure, recovery path, supporting contract evidence, confidence',
+      guardrail:'Grounded or nothing: no matching contract/policy span above threshold → "insufficient evidence, manual review." Conflicting contract vs. policy language defaults to signed contract terms unless the policy postdates it.',
+      example:'412-claim UHC orthopedic cohort → updated July 1 rate not applied consistently, $620K exposure.'
+    }
+  };
+
+  const scenarios = {
+    A: {
+      status:{1:'on',2:'on',3:'off'},
+      note:'<b>Scenario A —</b> a denial-rate drift cluster activates Payer Behavior and Denial Disposition. Contract Variance stays off — there is no underpayment question here.'
+    },
+    B: {
+      status:{1:'context',2:'on',3:'on'},
+      note:'<b>Scenario B —</b> an underpayment cluster activates Contract Variance and Denial Disposition / Recovery Action. Payer Behavior is optional/contextual only.'
+    }
+  };
+
+  function renderEngineBar(scn){
+    const s = scenarios[scn].status;
+    const labelFor = {on:'ON',off:'OFF',context:'OPTIONAL / CONTEXTUAL'};
+    let html = '';
+    [1,2,3].forEach(n=>{
+      const st = s[n];
+      html += `<div class="enginecard ${st==='off'?'off':(st==='on'?'on':'')}">
+        <div class="top"><span class="nm">Engine ${n}</span><span class="statuspill ${st}">${labelFor[st]}</span></div>
+        <div class="d2">${engineMeta[n].name.replace('Engine '+n+' — ','')}</div>
+      </div>`;
+    });
+    document.getElementById('enginebar').innerHTML = html;
+    document.getElementById('scenario-note').innerHTML = scenarios[scn].note;
+  }
+
+  function setScenario(scn){
+    document.querySelectorAll('.scenario-btn').forEach(b=>b.classList.toggle('active', b.dataset.scn===scn));
+    renderEngineBar(scn);
+  }
+
+  function renderEngineDetails(){
+    let html = '';
+    [1,2,3].forEach(n=>{
+      const d = engineMeta[n];
+      html += `<div class="enginedetail" id="ed-${n}" onclick="toggleEngineDetail(${n})">
+        <div class="head">
+          <span class="idx">0${n}</span>
+          <h4>${d.name}</h4>
+          <span class="cap">${d.cap}</span>
+          <span class="chev">▸</span>
+        </div>
+        <div class="body">
+          <div class="grid2"><b>Sequence</b><span style="color:var(--accent);font-weight:600;">${d.step}</span></div>
+          <div class="grid2"><b>Inputs</b><span>${d.inputs}</span></div>
+          <div class="grid2"><b>Agents</b><span>${d.agents}</span></div>
+          <div class="grid2"><b>Tools</b><span>${d.tools}</span></div>
+          <div class="grid2"><b>Outputs</b><span>${d.outputs}</span></div>
+          <div class="guardrail-note" style="margin-top:6px;">${d.guardrail}</div>
+          <div style="margin-top:8px;font-style:italic;color:var(--muted);">Example cohort: ${d.example}</div>
+        </div>
+      </div>`;
+    });
+    document.getElementById('engineDetailList').innerHTML = html;
+  }
+
+  function toggleEngineDetail(n){
+    const el = document.getElementById('ed-'+n);
+    const wasOpen = el.classList.contains('open');
+    document.querySelectorAll('.enginedetail').forEach(e=>e.classList.remove('open'));
+    if(!wasOpen) el.classList.add('open');
+  }
+
+  renderEngineDetails();
+  setScenario('A');
+</script>
+</body>
+</html>
